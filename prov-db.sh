@@ -1,29 +1,28 @@
-# Update and upgrade
-sudo apt-get update -y 
-DEBIAN_FRONTEND=noninteractive sudo apt-get upgrade -y
+#!/bin/bash
+set -e  # Stop script on error
+export DEBIAN_FRONTEND=noninteractive  # Prevent user prompts
 
-# Install gnupg and curl:
-sudo apt-get install gnupg curl
+# Update system
+sudo apt-get update -y
+sudo apt-get install -y gnupg curl
 
-#Download gpg key:
+# Import MongoDB GPG Key (force overwrite)
 curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | \
-   sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg \
-   --dearmor
+   sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor --yes
 
-#Create file list:
-echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+# Add MongoDB repository
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | \
+   sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
 
-#Update:
-sudo apt-get update
+# Update package lists
+sudo apt-get update -y
 
-#Install a specific release: 7.0.6
-sudo apt-get install -y mongodb-org=7.0.6 mongodb-org-database=7.0.6 mongodb-org-server=7.0.6 mongodb-mongosh mongodb-org-mongos=7.0.6 mongodb-org-tools=7.0.6
+# Install MongoDB 7.0.6 (WITHOUT `mongosh`)
+sudo apt-get install -y mongodb-org=7.0.6 mongodb-org-database=7.0.6 mongodb-org-server=7.0.6 mongodb-org-mongos=7.0.6 mongodb-org-tools=7.0.6 --no-install-recommends
 
-#Start mongodb:
-sudo systemctl start mongod
+# Prevent MongoDB from auto-upgrading
+sudo apt-mark hold mongodb-org mongodb-org-database mongodb-org-server mongodb-org-mongos mongodb-org-tools
 
-#Enable mongodb
-sudo systemctl enabled mongod
-
-# Restart mongodb service
+# Start MongoDB
+sudo systemctl enable --now mongod
 sudo systemctl restart mongod
