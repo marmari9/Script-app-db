@@ -1,13 +1,13 @@
 - [Deployment Guide: Two-Tier App on AWS](#deployment-guide-two-tier-app-on-aws)
-  - [**1. Setting Up the Database VM (DB VM)**](#1-setting-up-the-database-vm-db-vm)
+  - [**1. Setting Up the Database instance (DB instance)**](#1-setting-up-the-database-instance-db-instance)
     - [**Step 1: Launch a New EC2 Instance**](#step-1-launch-a-new-ec2-instance)
-    - [**Step 2: Connect to the DB VM \& Install MongoDB**](#step-2-connect-to-the-db-vm--install-mongodb)
-  - [**2. Setting Up the Application VM (App VM)**](#2-setting-up-the-application-vm-app-vm)
-    - [**Step 1: Launch the App VM**](#step-1-launch-the-app-vm)
+    - [**Step 2: Connect to the DB instance \& check MongoDB status**](#step-2-connect-to-the-db-instance--check-mongodb-status)
+  - [**2. Setting Up the Application instance (App instance)**](#2-setting-up-the-application-instance-app-instance)
+    - [**Step 1: Launch the App instance**](#step-1-launch-the-app-instance)
     - [**Step 2: Verify the Application Works**](#step-2-verify-the-application-works)
   - [**3. Creating Custom Images for Faster Deployment**](#3-creating-custom-images-for-faster-deployment)
-    - [**Step 1: Create an Image from DB VM**](#step-1-create-an-image-from-db-vm)
-    - [**Step 2: Create an Image from App VM**](#step-2-create-an-image-from-app-vm)
+    - [**Step 1: Create an Image from DB instance**](#step-1-create-an-image-from-db-instance)
+    - [**Step 2: Create an Image from App instance**](#step-2-create-an-image-from-app-instance)
   - [**4. Using Images to Deploy New Instances Faster**](#4-using-images-to-deploy-new-instances-faster)
   - [**5. Final Testing \& Cleanup**](#5-final-testing--cleanup)
   - [Blockers \& Solutions](#blockers--solutions)
@@ -28,13 +28,13 @@ This project demonstrates the deployment of a **two-tier web application** on AW
 ## 2. What is a Two-Tier Architecture?
 
 A **two-tier architecture** consists of:
-1. **Application Layer (App VM):** Serves frontend & backend logic.
-2. **Database Layer (DB VM):** Stores and manages application data.
+1. **Application Layer (App instance):** Serves frontend & backend logic.
+2. **Database Layer (DB instance):** Stores and manages application data.
 
 **How it works:**
 - The **user** accesses the application via HTTP.
-- The **App VM** processes requests and communicates with the **DB VM** over port **27017** (MongoDB).
-- The **DB VM** stores and retrieves data, sending responses back to the App.
+- The **App instance** processes requests and communicates with the **DB instance** over port **27017** (MongoDB).
+- The **DB instance** stores and retrieves data, sending responses back to the App.
 
 ![alt text](<images/Screenshot 2025-02-21 152345.png>)
 
@@ -43,14 +43,14 @@ A **two-tier architecture** consists of:
 ### **Infrastructure Deployment**
 - Created **EC2 instances** for App & Database in the same **VPC**  
 - Used **Security Groups** to allow only necessary ports:
-   - **App:** Port 80 (HTTP), 3000 (Node.js)
-   - **DB:** Port 27017 (MongoDB) (Only accessible from App VM)  
+   - **App:** Port 8080 (HTTP), 3000 (Node.js), 22 (SSH)
+   - **DB:** Port 27017 (MongoDB) (Only accessible from App instance)  
 Configured **Nginx Reverse Proxy** for better routing
 
 ### **Automation with User Data**
 - Used **User Data scripts** for auto-provisioning:
-   - **DB VM (`prov-db.sh`)**: Installs and configures MongoDB  
-   - **App VM (`prov-app.sh`)**: Installs Node.js, clones the app, and starts the server  
+   - **DB instance (`prov-db.sh`)**: Installs and configures MongoDB  
+   - **App instance (`prov-app.sh`)**: Installs Node.js, clones the app, and starts the server  
 Created **Custom AMIs** to launch instances faster  
 
 ---
@@ -68,7 +68,7 @@ Using **User Data scripts** for instance provisioning provides several benefits:
 - Eliminates **human errors** from manual setup.
 
 ### **Faster Scaling**
-- If the App VM fails, a new one can **launch automatically** with the same configuration.
+- If the App instance fails, a new one can **launch automatically** with the same configuration.
 - **AMIs** allow creating pre-configured VMs **instantly**.
 
 ## 5. Future Improvements
@@ -84,14 +84,14 @@ Using **User Data scripts** for instance provisioning provides several benefits:
 
 # Deployment Guide: Two-Tier App on AWS
 
-## **1. Setting Up the Database VM (DB VM)**
+## **1. Setting Up the Database instance (DB instance)**
 
 ### **Step 1: Launch a New EC2 Instance**
 1. Go to AWS **EC2 Dashboard** > **Instances** > **Launch Instance**.
 2. **Select Amazon Machine Image (AMI):** Choose **Ubuntu 22.04**.
 3. **Choose Instance Type:** t3.micro.
 4. **Configure Security Group:**
-   - Allow **port 27017 (MongoDB)** but restrict access to only the App VM.
+   - Allow **port 27017 (MongoDB)** but restrict access to only the App instance, 22 (SSH)
 5. **Add Storage:** Default 8GB.
 6. **Advanced Details > User Data:** add the following :
 ```bash 
@@ -150,7 +150,7 @@ echo "MongoDB installation and configuration completed."
 
 ---
 
-### **Step 2: Connect to the DB VM & Install MongoDB**
+### **Step 2: Connect to the DB instance & check MongoDB status**
 
 1. **SSH into the Instance:**
    ```bash
@@ -165,14 +165,14 @@ echo "MongoDB installation and configuration completed."
 
 ---
 
-## **2. Setting Up the Application VM (App VM)**
+## **2. Setting Up the Application instance (App instance)**
 
-### **Step 1: Launch the App VM**
+### **Step 1: Launch the App instance**
 1. Go to AWS **EC2 Dashboard** > **Launch Instance**.
 2. **Select Ubuntu 22.04** as the base AMI.
 3. **Choose Instance Type:** t3.micro.
 4. **Configure Security Group:**
-   - Allow **port 80 (HTTP)** and **port 3000 (Node.js App)**.
+   - Allow **port 8080 (HTTP)** and **port 3000 (Node.js App)**,**port 22 (SSH)**
 5. **Add Storage:** Default 8GB.
 6. **Advanced Details > User Data:** Paste the following script:
 ```bash
@@ -230,7 +230,7 @@ echo "Setup completed successfully."
 
 
 ### **Step 2: Verify the Application Works**
-1. **SSH into the App VM:**
+1. **SSH into the App instance:**
    ```bash
    ssh -i path/to/key ubuntu@<APP_VM_PUBLIC_IP>
    ```
@@ -256,7 +256,7 @@ echo "Setup completed successfully."
 
 ## **3. Creating Custom Images for Faster Deployment**
 
-### **Step 1: Create an Image from DB VM**
+### **Step 1: Create an Image from DB instance**
 1. Go to **AWS EC2 Dashboard**.
 2. Select the **Database Instance**.
 3. Click **Actions > Image & Templates > Create Image**.
@@ -265,7 +265,7 @@ echo "Setup completed successfully."
 - Image created from the instances with user data:
 ![alt text](<images/create an image.png>)
 
-### **Step 2: Create an Image from App VM**
+### **Step 2: Create an Image from App instance**
 1. Select the **Application Instance**.
 2. Click **Actions > Image & Templates > Create Image**.
 3. Click **Create Image**.
@@ -274,8 +274,8 @@ echo "Setup completed successfully."
 ---
 
 ## **4. Using Images to Deploy New Instances Faster**
-1. **Launch New DB VM** using the **MongoDB-Preconfigured** image.
-2. **Launch New App VM** using the **App-Preconfigured** image.
+1. **Launch New DB instance** using the **MongoDB-Preconfigured** image.
+2. **Launch New App instance** using the **App-Preconfigured** image.
 3. Add minimal **User Data** to start the app:
    ```bash
    #!/bin/bash
@@ -299,7 +299,7 @@ echo "Setup completed successfully."
 ## Blockers & Solutions
 | Issue | Reason | Solution |
 |--------|--------|------------|
-| MongoDB connection refused | Security groups blocking port 27017 | Open port 27017 for the App VM in the Security Group |
+| MongoDB connection refused | Security groups blocking port 27017 | Open port 27017 for the App instance in the Security Group |
 | User data script failed | Permissions issues | Used `chmod +x` before execution |
 | Reverse proxy not routing requests | Incorrect Nginx config | Updated `proxy_pass http://localhost:3000;` and restarted Nginx |
 
